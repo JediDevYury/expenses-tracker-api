@@ -1,4 +1,4 @@
-# Event Management System - API
+# Expenses Tracker - API
 
 
 Big thanks for the [basic API template with Drizzle](https://github.com/zacharynoble/express-typescript-postgres-drizzle-auth-template) to [Zach](https://github.com/zacharynoble).
