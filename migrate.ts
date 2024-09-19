@@ -3,7 +3,7 @@ import { migrate } from 'drizzle-orm/postgres-js/migrator';
 import postgres from 'postgres';
 import { config } from 'dotenv';
 
-config({ path: '.env' });
+config({ path: '.env.local' });
 
 const pg = postgres({
   host: process.env.DB_HOST,

@@ -3,10 +3,7 @@ import postgres from 'postgres';
 
 // Thanks to https://github.com/zacharynoble/express-typescript-postgres-drizzle-auth-template
 import { DB_DATABASE, DB_HOST, DB_MAX_CONNECTIONS, DB_PASSWORD, DB_PORT, DB_USER } from '@/config';
-import * as attendance from '@/models/attendance';
-import * as events from '@/models/events';
-import * as users from '@/models/users';
-import * as comments from '@/models/comments';
+import {users, totp} from "@/models/users";
 
 const pg = postgres({
   host: DB_HOST,
@@ -17,6 +14,6 @@ const pg = postgres({
   max: DB_MAX_CONNECTIONS,
 });
 
-const db = drizzle(pg, { schema: { ...attendance, ...users, ...events, ...comments } });
+const db = drizzle(pg, { schema: { ...users, ...totp } });
 
 export default db;
