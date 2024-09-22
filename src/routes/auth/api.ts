@@ -1,10 +1,10 @@
 import { Router } from 'express';
-import QRCode from 'qrcode';
 
 import {
   generateOtpAuthUrlAndSecret,
   getUserByEmail,
   registerUser,
+  setUserActive,
   updateUserAvatar,
   verifyLogin,
   verifyTOTP,
@@ -18,11 +18,20 @@ const router = Router();
 
 router.post('/register', async (req, res, next) => {
   try {
-    const { email, password, name } = req.body;
+    const { email, password } = req.body;
 
-    await registerUser(email, password, name);
+    const user = await registerUser(email, password);
 
-    res.status(200).send({ message: 'Successfully signed up' });
+    const {
+      qrCode,
+      otpSecret
+    } = await generateOtpAuthUrlAndSecret(user.id);
+
+    res.status(200).send({
+      email,
+      qrCode,
+      otpSecret,
+    })
   } catch (error) {
     next(error);
   }
@@ -45,16 +54,24 @@ router.post('/login', async (req, res, next) => {
   try {
     const { email, password } = req.body;
     const user = await verifyLogin(email, password);
+
+    if(user.isActive) {
+      res.status(200).send({
+        email: user.email,
+      })
+
+      return;
+    }
+
     const {
-      otpAuthUrl,
+      qrCode,
       otpSecret
     } = await generateOtpAuthUrlAndSecret(user.id);
-    const qrUrl = await QRCode.toDataURL(otpAuthUrl);
 
     res.status(200).send({
-      qrCodeUrl: qrUrl,
-      secret: otpSecret,
-      email: user.email,
+      email,
+      qrCode,
+      otpSecret,
     })
   } catch (error) {
     next(error);
@@ -66,9 +83,12 @@ router.post('/verify-2fa', async (req, res, next) => {
     const { email, token } = req.body;
 
     const user = await getUserByEmail(email);
-    const isVerified = await verifyTOTP(user.id, token);
 
-    if (!isVerified) throw new UnauthorizedError('Invalid 2FA token');
+    await verifyTOTP(user.id, token);
+
+    if (!user.isActive) {
+      await setUserActive(user.id, true);
+    }
 
     const accessToken = createAccessToken(user.id, user.email, user.name);
     const refreshToken = createRefreshToken(user.id, user.email, user.name);
@@ -77,7 +97,35 @@ router.post('/verify-2fa', async (req, res, next) => {
   } catch (error) {
     next(error);
   }
-})
+});
+
+router.post('/reset-2fa', async (req, res, next) => {
+  try {
+    const { email } = req.body;
+
+    const user = await getUserByEmail(email);
+    const {
+      qrCode,
+      otpSecret
+    } = await generateOtpAuthUrlAndSecret(user.id);
+
+    if(user.isActive) {
+      await setUserActive(user.id, false);
+    }
+
+    res.status(200).send({ qrCode, otpSecret });
+  } catch (error) {
+    next(error);
+  }
+});
+
+router.get('/sign-out', authenticateUser, async (_, res, next) => {
+  try {
+    res.status(200).send({ message: 'Successfully signed out' });
+  } catch (error) {
+    next(error);
+  }
+});
 
 router.post('/:userId/upload', authenticateUser, upload.single('image'), async (req, res, next) => {
   try {

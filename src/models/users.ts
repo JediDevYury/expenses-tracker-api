@@ -4,6 +4,7 @@ export const users = pgTable('users', {
   id: uuid('id').primaryKey().defaultRandom(),
   name: text('name').notNull(),
   email: text('email').unique().notNull(),
+  isActive: boolean('is_active').default(false),
   passwordHash: text('password_hash').notNull(),
   avatar: text('avatar'),
   createdAt: timestamp('createdAt').defaultNow(),
